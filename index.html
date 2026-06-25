@@ -217,15 +217,15 @@ svg { display:inline-block; vertical-align:middle; }
       <div class="prompt-desc">A3縦向き1枚に野菜を全部まとめる、おしゃれな手書き風メニュー表用です。グリッドに縛られず自由なレイアウトを重視します。</div>
 
       <div class="logo-choice-block">
-        <label class="field-label" style="margin-bottom:2px;">屋号ロゴの貼り付けスペース</label>
-        <p style="font-size:.7rem;opacity:.6;margin-bottom:8px;line-height:1.5;">選択するとAIが左上に空白スペースを確保します。印刷後、手元のロゴ画像を切り貼りしてください。</p>
+        <label class="field-label" style="margin-bottom:2px;">屋号ロゴの配置</label>
+        <p style="font-size:.7rem;opacity:.6;margin-bottom:8px;line-height:1.5;">「確保する」を選ぶと、プロンプトに「添付したロゴを左上に配置」という指示が入ります。ChatGPTにプロンプトと一緒にロゴ画像を添付して送ってください。</p>
         <label class="logo-radio-row">
           <input type="radio" name="logo-choice" value="none" checked onchange="onLogoChoiceChange()">
-          <span>スペースなし</span>
+          <span>ロゴなし</span>
         </label>
         <label class="logo-radio-row">
           <input type="radio" name="logo-choice" value="logo1" onchange="onLogoChoiceChange()">
-          <span>左上にロゴスペースを確保（約15cm角）</span>
+          <span>ロゴを左上に配置する（添付画像として一緒に送る）</span>
         </label>
       </div>
 
@@ -327,10 +327,10 @@ const updateLogoStatusBadge = () => {
   const badge = document.getElementById('logo-status-badge');
   if(!badge) return;
   if(v === 'none') {
-    badge.textContent = 'ロゴスペース：なし';
+    badge.textContent = 'ロゴ：なし';
     badge.className = 'logo-badge off';
   } else {
-    badge.textContent = '✓ ロゴスペース：左上に確保';
+    badge.textContent = '✓ ロゴ：左上に配置';
     badge.className = 'logo-badge on';
   }
 };
@@ -391,24 +391,22 @@ const buildArtMenuPrompt = () => {
   const logoChoice = (document.querySelector('input[name="logo-choice"]:checked') || {}).value || 'none';
   const hasLogo = (logoChoice === 'logo1' || logoChoice === 'logo2');
 
-  // ロゴと馴染む背景スタイル指定
   const bgStyle = hasLogo
-    ? '背景は白（純白）にしてください。ロゴ画像と後から合成するため、クラフト紙や色付き背景は使わないでください。全体のタッチはクレヨンや色鉛筆で手描きしたような柔らかいスタイルにし、緑・青・茶・オレンジを中心としたやさしい色使いにしてください。葉っぱや草などの小さなあしらいを余白に散らしてもOKです（ロゴと同じ世界観になるように）。'
+    ? '背景は白（純白）にしてください。全体のタッチはクレヨンや色鉛筆で手描きしたような柔らかいスタイルにし、緑・青・茶・オレンジを中心としたやさしい色使いにしてください。葉っぱや草などの小さなあしらいを余白に散らしてもOKです。'
     : '背景はクラフト紙風または白地の水彩テクスチャにしてください。全体のタッチはクレヨンや色鉛筆で手描きしたような柔らかいスタイルで、緑・青・茶・オレンジを中心としたやさしい色使いにしてください。';
 
-  // ロゴスペース指示
   let logoNote = '';
   if (hasLogo) {
-    logoNote = '\n【ロゴ貼り付け用スペース】紙面の左上角に、約150mm×150mmの完全な白い空白エリアを確保してください。そのエリアには野菜のイラストも文字も装飾も一切描かないでください。後からユーザーが手元の円形ロゴ画像（白背景）をそこに貼り付けます。エリアの境界は薄いグレーの細い点線で示してください（印刷後もほぼ見えない程度の薄さ）。メニュー表の野菜リストはロゴスペースを避けたエリアに収めてください。\n';
+    logoNote = '\n【ロゴの配置】この会話に添付したロゴ画像を、紙面の左上角（端から約10mmの余白を取った位置）に、約150mm×150mmのサイズで配置してください。ロゴは確認や質問をせずにそのまま配置してください。ロゴの周囲の野菜イラストや文字はロゴに重ならないよう配置してください。\n';
   }
 
   const dataBlock = '掲載する野菜リスト（全'+activeItems.length+'品。各行の「産地」「ひとこと」「【本日の目玉】」は記載がある行にのみ存在します）：\n'+lines;
 
-  return 'おしゃれな手書き風のイラストメニュー表を、A3サイズ・縦向き（ポートレート）の1枚にまとめて作ってください。\n\n'
+  return 'おしゃれな手書き風のイラストメニュー表を、A3サイズ・縦向き（ポートレート）の1枚にまとめて作ってください。確認や質問は不要です。このプロンプトの指示をそのまま実行してください。\n\n'
     + '【背景・スタイル】\n' + bgStyle + '\n\n'
     + 'レイアウトは、グリッドやマス目で均等に区切る構成ではなく、デザイナーが手描きで仕上げたような自由で動きのある配置にしてください。野菜のイラストや文字の大きさ・向き・余白を意図的に変化させ、視線が自然に流れるような仕上がりにしてください。文字は手書き風のカリグラフィーやレタリングにしてください。\n'
     + logoNote
-    + '\n【最重要・文字に関する厳格なルール】\nこの画像に書き込む文字情報は、下記の「掲載する野菜リスト」に書かれている文字（野菜名・価格・産地・ひとこと・本日の目玉の表示）以外、一切使用しないでください。\n見出しコピー、煽り文句、店の挨拶文、キャッチフレーズ、英語表記、日付、天気、季節の言葉など、リストに存在しない文章やフレーズを新たに作って書き込むことは禁止します。\n「産地」が書かれていない野菜には産地表記を描かないでください。「ひとこと」が書かれていない野菜にはコピーや説明文を描かないでください。\n\n'
+    + '\n【最重要・文字に関する厳格なルール】\nこの画像に書き込む文字情報は、下記の「掲載する野菜リスト」に書かれている文字（野菜名・価格・産地・ひとこと・本日の目玉の表示）およびロゴ内の既存文字以外、一切使用しないでください。\n見出しコピー、煽り文句、店の挨拶文、キャッチフレーズ、英語表記、日付、天気、季節の言葉など、リストに存在しない文章やフレーズを新たに作って書き込むことは禁止します。\n「産地」が書かれていない野菜には産地表記を描かないでください。「ひとこと」が書かれていない野菜にはコピーや説明文を描かないでください。\n\n'
     + dataBlock
     + '\n\n【重要】上記の野菜は1品も省略せず、全て同じ1枚の紙面に収めてください。品数が多い場合は、自由なレイアウトを保ったまま文字やイラストを小さくして調整し、掲載漏れがないようにしてください。出力前に、全'+activeItems.length+'品が描かれているか、リストにない文字が紙面に存在しないかを必ず確認してください。\n\n各野菜には、繊細で味のある手描きイラストを添えてください。\n「【本日の目玉】」と指定された野菜は、他より少し大きく描いたり、囲み線やリボン、控えめな装飾を加えることで自然に目を引くようにしてください（新しい文言は追加せず、装飾のみで目立たせてください）。';
 };
@@ -619,6 +617,25 @@ document.getElementById('btn-add').addEventListener('click',addItem);
 
 document.getElementById('inp-unit-label').value = defaultUnitLabel('count');
 load();
+
+// 初回起動時（データが空の場合）のみプリセット野菜を投入
+if(items.length === 0){
+  const PRESETS = [
+    'ミニトマト','中玉トマト','大玉トマト',
+    'なす','ピーマン','きゅうり',
+    'キャベツ','ほうれん草','とうきび'
+  ];
+  items = PRESETS.map(name => ({
+    id: uid(), name,
+    costMode: 'count',
+    costTotal: '', costQty: 1, sellQty: 1,
+    unitLabel: '個',
+    sell: 0,
+    active: true, featured: false, note: '', origin: ''
+  }));
+  save();
+}
+
 loadLogoChoice();
 updateLogoStatusBadge();
 renderItems();
