@@ -108,6 +108,9 @@ input:focus { border-color:var(--green); }
 }
 .btn-active-toggle.on  { background:var(--green); border-color:var(--green); color:#fff; }
 .btn-active-toggle.off { background:#fff; border-color:var(--gray); color:var(--gray); }
+.logo-badge { font-size:.68rem; font-weight:700; font-family:var(--font-main); border-radius:20px; padding:3px 9px; white-space:nowrap; }
+.logo-badge.on  { background:#E8F4E8; color:var(--green-dk); border:1.5px solid var(--green); }
+.logo-badge.off { background:#F5F0E8; color:#999; border:1.5px solid var(--line); }
 .logo-choice-block { margin:10px 0; padding:10px 12px; background:var(--bg); border-radius:14px; }
 .logo-radio-row { display:flex; align-items:center; gap:6px; font-size:.82rem; padding:4px 0; cursor:pointer; }
 .logo-radio-row input { accent-color: var(--green); width:16px; height:16px; flex-shrink:0; }
@@ -203,11 +206,14 @@ svg { display:inline-block; vertical-align:middle; }
     <div class="card">
       <div class="prompt-title-row">
         <div class="prompt-title">&#9314; A3縦 おしゃれ手書き風メニュー表用プロンプト</div>
-        <button class="btn-copy" id="btn-copy-art" onclick="copyPrompt('art')">
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+          <span id="logo-status-badge" class="logo-badge off">ロゴスペース：なし</span>
+          <button class="btn-copy" id="btn-copy-art" onclick="copyPrompt('art')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
           コピー
         </button>
-      </div>
+        </div><!-- /flex col -->
+      </div><!-- /prompt-title-row -->
       <div class="prompt-desc">A3縦向き1枚に野菜を全部まとめる、おしゃれな手書き風メニュー表用です。グリッドに縛られず自由なレイアウトを重視します。</div>
 
       <div class="logo-choice-block">
@@ -296,10 +302,16 @@ const LOGO_KEY = 'veggie-stand-logo-choice-v1';
 const saveLogoChoice = (v) => { try{localStorage.setItem(LOGO_KEY,v);}catch(e){} };
 const loadLogoChoice = () => {
   try{
-    const v = localStorage.getItem(LOGO_KEY);
-    if(v){
-      const el = document.querySelector('input[name="logo-choice"][value="'+v+'"]');
-      if(el) el.checked = true;
+    let v = localStorage.getItem(LOGO_KEY);
+    // logo2は廃止済み→logo1に正規化
+    if(v === 'logo2') { v = 'logo1'; saveLogoChoice('logo1'); }
+    const el = document.querySelector('input[name="logo-choice"][value="'+(v||'none')+'"]');
+    if(el) el.checked = true;
+    else {
+      // 対応する選択肢がなければ「なし」に戻す
+      const fallback = document.querySelector('input[name="logo-choice"][value="none"]');
+      if(fallback) fallback.checked = true;
+      saveLogoChoice('none');
     }
   }catch(e){}
 };
@@ -307,13 +319,31 @@ const onLogoChoiceChange = () => {
   const v = (document.querySelector('input[name="logo-choice"]:checked') || {}).value || 'none';
   saveLogoChoice(v);
   document.getElementById('prompt-art').value = buildArtMenuPrompt();
+  updateLogoStatusBadge();
+};
+
+const updateLogoStatusBadge = () => {
+  const v = (document.querySelector('input[name="logo-choice"]:checked') || {}).value || 'none';
+  const badge = document.getElementById('logo-status-badge');
+  if(!badge) return;
+  if(v === 'none') {
+    badge.textContent = 'ロゴスペース：なし';
+    badge.className = 'logo-badge off';
+  } else {
+    badge.textContent = '✓ ロゴスペース：左上に確保';
+    badge.className = 'logo-badge on';
+  }
 };
 
 const buildSignboardPrompt = () => {
   const activeItems = items.filter(it => it.active !== false);
   if(!activeItems.length)return '';
   const sheets=chunk(activeItems,MENU_ITEMS_PER_SHEET);
-  const layoutRule = '用紙はA4サイズ・横向き（ランドスケープ）で、画面全体を均等な2×2の4マスに分割してください。野菜が4品に満たない場合でも、各野菜は1マスの中だけに収め、マスの大きさ自体は4品揃っている時と同じサイズのままにしてください。余ったマスは何も描かず空白にしてください。1つの野菜を複数マスや画面全体に大きく広げないでください。リストに記載のない野菜は描かないでください。';
+
+  const styleRule = '【背景・スタイル（必ず守ること）】\n背景はベージュまたはクラフト紙風の温かみのある紙の質感にしてください。黒板・黒背景・ダークな背景は絶対に使わないでください。全体のタッチは色鉛筆とマーカーを組み合わせた柔らかい手描きスタイルにしてください。各マスには細い手描き風の装飾枠（角に小さな飾りのあるレトロ風）を付けてください。野菜名は大きめの手書き文字、価格は赤またはオレンジ系の色で大きく強調、産地とひとことは小さめで添えてください。';
+
+  const layoutRule = '【レイアウト（必ず守ること）】\n用紙はA4サイズ・横向き（ランドスケープ）で、画面全体を均等な2×2の4マスに分割してください。野菜が4品に満たない場合でも、各野菜は1マスの中だけに収め、マスの大きさ自体は4品揃っている時と同じサイズのままにしてください。余ったマスは何も描かず空白にしてください。1つの野菜を複数マスや画面全体に大きく広げないでください。リストに記載のない野菜は描かないでください。';
+
   const secs=sheets.map((sheetItems,idx)=>{
     const lines=sheetItems.map(it=>{
       const o=it.origin&&it.origin.trim()?'（'+it.origin.trim()+'産）':'';
@@ -321,12 +351,14 @@ const buildSignboardPrompt = () => {
       const f=it.featured?'　★本日の目玉★':'';
       return '・'+it.name+o+'：'+priceLabel(it)+n+f;
     }).join('\n');
-    return '【'+(idx+1)+'枚目／A4横向き：2×2の4マスメニュー表】\n'+layoutRule+'\n\n掲載する野菜（'+sheetItems.length+'品、残りのマスは空白）：\n'+lines;
+    return '【'+(idx+1)+'枚目／A4横向き：2×2の4マスメニュー表】\n\n'+styleRule+'\n\n'+layoutRule+'\n\n掲載する野菜（'+sheetItems.length+'品、残りのマスは空白）：\n'+lines;
   }).join('\n\n');
+
   const multiNote = sheets.length>1
-    ? '\n野菜の数が多いため、合計'+sheets.length+'枚のシートに分かれます。今回はまず1枚目だけ作成してください。\n2枚目以降が欲しいときは、私から「次のメニュー表をお願いします。1枚目と同じ2×2の4マスレイアウトで、画面全体を使わず、各野菜を1マスずつに収めてください」と伝えますので、その指示に従って次の野菜で同じレイアウトの1枚を作成してください。\n'
+    ? '\n野菜の数が多いため、合計'+sheets.length+'枚のシートに分かれます。今回はまず1枚目だけ作成してください。\n2枚目以降が欲しいときは「次のメニュー表をお願いします。1枚目と同じベージュ/クラフト紙背景・2×2の4マスレイアウトで作ってください」と伝えてください。\n'
     : '';
-  return '手描き風でポップな、八百屋の路上販売スタンドに飾るメニュー看板のイラストを作ってください。\n\n木製の黒板またはクラフト紙風の板をベースに、カラフルなチョークやマーカーで野菜の名前と価格を手書き風の文字で大きく書いてください。\n'+multiNote+'\n'+secs+'\n\n各野菜には、シンプルで可愛い手描き風のイラストを添えてください。\n産地が指定されている野菜は、「〇〇産」のように小さめの手書き文字で添えてください。\nアピールポイントのひとことが書かれている野菜は、その言葉を短いキャッチコピーとして手書き風の文字で添えてください。\n「★本日の目玉★」と指定された野菜は、星マークや「本日のおすすめ!」のような手描きの吹き出し・太めの枠線で他の野菜より少し目立つように装飾してください（マスの大きさは変えず、装飾だけで目立たせてください）。\n全体的に温かみがあり、道端の八百屋・産直スタンドらしい親しみやすいポップな雰囲気でデザインしてください。\n文字は離れた場所からでも読みやすい太さ・大きさにしてください。\nリストに記載のある野菜名・価格・産地・ひとこと以外の文章（キャッチコピーや挨拶文など）は新たに作成しないでください。';
+
+  return '手描き風でポップな、八百屋の路上販売スタンドに飾るメニュー看板を作ってください。\n'+multiNote+'\n'+secs+'\n\n各野菜には、シンプルで可愛い手描き風イラストを添えてください。\n「★本日の目玉★」と指定された野菜のマスには、星マークや太めの装飾枠など、他のマスより目立つ装飾を加えてください（マスの大きさは変えず、装飾だけで目立たせてください）。\nリストに記載のある野菜名・価格・産地・ひとこと以外の文章（キャッチコピーや挨拶文など）は一切追加しないでください。';
 };
 
 const buildPriceTagPrompt = () => {
@@ -586,7 +618,10 @@ document.getElementById('inp-name').addEventListener('keydown',e=>{if(e.key==='E
 document.getElementById('btn-add').addEventListener('click',addItem);
 
 document.getElementById('inp-unit-label').value = defaultUnitLabel('count');
-load(); loadLogoChoice(); renderItems();
+load();
+loadLogoChoice();
+updateLogoStatusBadge();
+renderItems();
 </script>
 
 <script>
