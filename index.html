@@ -115,6 +115,56 @@ input:focus { border-color:var(--green); }
 .logo-radio-row { display:flex; align-items:center; gap:6px; font-size:.82rem; padding:4px 0; cursor:pointer; }
 .logo-radio-row input { accent-color: var(--green); width:16px; height:16px; flex-shrink:0; }
 svg { display:inline-block; vertical-align:middle; }
+
+/* ── タブ ── */
+.tab-nav { display:flex; background:var(--green-dk); }
+.tab-btn {
+  flex:1; padding:12px 4px; border:none; background:transparent; color:rgba(255,255,255,.6);
+  font-family:var(--font-main); font-size:.82rem; font-weight:700; cursor:pointer; transition:all .15s;
+  border-bottom:3px solid transparent;
+}
+.tab-btn.active { color:#fff; border-bottom-color:var(--mustard); }
+
+/* ── POSページ ── */
+#page-pos { display:none; max-width:480px; margin:0 auto; padding:12px 12px 80px; }
+#page-menu { display:block; }
+
+.pos-total-bar {
+  background:var(--green-dk); color:#fff; border-radius:18px;
+  padding:16px 20px; margin-bottom:14px; text-align:center; position:sticky; top:8px; z-index:10;
+  box-shadow:0 4px 16px rgba(0,0,0,.18);
+}
+.pos-total-label { font-size:.78rem; opacity:.8; letter-spacing:.05em; margin-bottom:2px; }
+.pos-total-yen { font-family:var(--font-pop); font-size:2.8rem; font-weight:900; line-height:1; letter-spacing:.02em; }
+.pos-total-sub { font-size:.72rem; opacity:.65; margin-top:4px; }
+
+.pos-row {
+  display:flex; align-items:center; gap:10px;
+  background:var(--card); border:1.5px solid var(--line); border-radius:16px;
+  padding:10px 12px; margin-bottom:8px; box-shadow:0 1px 3px rgba(0,0,0,.05);
+}
+.pos-name { flex:1; font-weight:700; font-size:.95rem; min-width:0; }
+.pos-unit-price { font-size:.7rem; opacity:.55; white-space:nowrap; }
+.pos-qty-wrap { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+.pos-qty-select {
+  border:2px solid var(--line); border-radius:10px; padding:6px 4px 6px 8px;
+  font-size:1rem; font-weight:700; font-family:var(--font-main); color:var(--text);
+  background:#fff; outline:none; min-width:62px; cursor:pointer;
+}
+.pos-qty-select:focus { border-color:var(--green); }
+.pos-row-total { font-size:1rem; font-weight:900; color:var(--accent); white-space:nowrap; min-width:60px; text-align:right; }
+.pos-clear-row { background:none; border:none; cursor:pointer; font-size:1.1rem; opacity:.45; padding:2px; flex-shrink:0; }
+.pos-clear-row:hover { opacity:1; }
+
+.pos-empty { text-align:center; padding:32px 16px; opacity:.5; font-size:.9rem; line-height:1.8; }
+
+.btn-clear-all {
+  width:100%; padding:13px; border:none; border-radius:14px; font-family:var(--font-main);
+  font-size:.95rem; font-weight:700; cursor:pointer; transition:opacity .15s; margin-top:4px;
+  background:var(--mustard); color:#fff;
+}
+.btn-clear-all:hover { opacity:.85; }
+.pos-actions { display:flex; flex-direction:column; gap:8px; margin-top:10px; }
 </style>
 <link rel="apple-touch-icon" href="./icon.png">
 </head>
@@ -128,6 +178,26 @@ svg { display:inline-block; vertical-align:middle; }
   <p class="header-desc">仕入れの総額と個数（or重量）から単価を計算し、2割増しの売値を自動表示。<br>看板&amp;値札用の画像生成プロンプトもまとめて作れます。</p>
 </header>
 
+<!-- タブナビ -->
+<div class="tab-nav">
+  <button class="tab-btn active" id="tab-menu" onclick="switchTab('menu')">📋 メニュー管理</button>
+  <button class="tab-btn" id="tab-pos" onclick="switchTab('pos')">🛒 販売電卓</button>
+</div>
+
+<!-- POSページ -->
+<div id="page-pos">
+  <div class="pos-total-bar">
+    <div class="pos-total-label">合計金額</div>
+    <div class="pos-total-yen" id="pos-total-yen">¥0</div>
+    <div class="pos-total-sub" id="pos-total-sub">選択された商品はありません</div>
+  </div>
+  <div id="pos-list"></div>
+  <div class="pos-actions">
+    <button class="btn-clear-all" onclick="clearAllQty()">🔄 一括クリア（次のお客様）</button>
+  </div>
+</div>
+
+<div id="page-menu">
 <main>
   <div class="card">
     <div class="section-title">野菜を追加</div>
@@ -189,7 +259,7 @@ svg { display:inline-block; vertical-align:middle; }
           コピー
         </button>
       </div>
-      <div class="prompt-desc">A4横向きの看板イラスト用です。1枚に野菜4品まで（2×2マス）。5品目以降が必要な場合は、画像生成AIに次のメッセージを送ってください：「次のメニュー表をお願いします。1枚目と同じ2×2の4マスレイアウトで、画面全体を使わず、各野菜を1マスずつに収めてください」</div>
+      <div class="prompt-desc">A4横向きの看板イラスト用です。1枚に野菜6品まで（2×3マス）。7品目以降が必要な場合は、画像生成AIに次のメッセージを送ってください：「次のメニュー表をお願いします。1枚目と同じ2×3の6マスレイアウトで、画面全体を使わず、各野菜を1マスずつに収めてください」</div>
       <textarea class="prompt-textarea" id="prompt-sign" rows="10" readonly></textarea>
     </div>
     <div class="card">
@@ -234,11 +304,12 @@ svg { display:inline-block; vertical-align:middle; }
     <p class="note-small">生成した文章を画像生成AI（例：Gemini、ChatGPT、Midjourneyなど）に貼り付けてご利用ください。</p>
   </div>
 </main>
+</div><!-- /page-menu -->
 
 <script>
 const STORAGE_KEY = 'veggie-stand-items-v1';
 const CARDS_PER_SHEET = 10;
-const MENU_ITEMS_PER_SHEET = 4;
+const MENU_ITEMS_PER_SHEET = 6;
 let items = [];
 
 // ── 単価計算 ──
@@ -342,7 +413,7 @@ const buildSignboardPrompt = () => {
 
   const styleRule = '【背景・スタイル（必ず守ること）】\n背景はベージュまたはクラフト紙風の温かみのある紙の質感にしてください。黒板・黒背景・ダークな背景は絶対に使わないでください。全体のタッチは色鉛筆とマーカーを組み合わせた柔らかい手描きスタイルにしてください。各マスには細い手描き風の装飾枠（角に小さな飾りのあるレトロ風）を付けてください。野菜名は大きめの手書き文字、価格は赤またはオレンジ系の色で大きく強調、産地とひとことは小さめで添えてください。';
 
-  const layoutRule = '【レイアウト（必ず守ること）】\n用紙はA4サイズ・横向き（ランドスケープ）で、画面全体を均等な2×2の4マスに分割してください。野菜が4品に満たない場合でも、各野菜は1マスの中だけに収め、マスの大きさ自体は4品揃っている時と同じサイズのままにしてください。余ったマスは何も描かず空白にしてください。1つの野菜を複数マスや画面全体に大きく広げないでください。リストに記載のない野菜は描かないでください。';
+  const layoutRule = '【レイアウト（必ず守ること）】\n用紙はA4サイズ・横向き（ランドスケープ）で、画面全体を均等な2行×3列の6マスに分割してください。野菜が6品に満たない場合でも、各野菜は1マスの中だけに収め、マスの大きさ自体は6品揃っている時と同じサイズのままにしてください。余ったマスは何も描かず空白にしてください。1つの野菜を複数マスや画面全体に大きく広げないでください。リストに記載のない野菜は描かないでください。';
 
   const secs=sheets.map((sheetItems,idx)=>{
     const lines=sheetItems.map(it=>{
@@ -351,11 +422,11 @@ const buildSignboardPrompt = () => {
       const f=it.featured?'　★本日の目玉★':'';
       return '・'+it.name+o+'：'+priceLabel(it)+n+f;
     }).join('\n');
-    return '【'+(idx+1)+'枚目／A4横向き：2×2の4マスメニュー表】\n\n'+styleRule+'\n\n'+layoutRule+'\n\n掲載する野菜（'+sheetItems.length+'品、残りのマスは空白）：\n'+lines;
+    return '【'+(idx+1)+'枚目／A4横向き：2×3の6マスメニュー表】\n\n'+styleRule+'\n\n'+layoutRule+'\n\n掲載する野菜（'+sheetItems.length+'品、残りのマスは空白）：\n'+lines;
   }).join('\n\n');
 
   const multiNote = sheets.length>1
-    ? '\n野菜の数が多いため、合計'+sheets.length+'枚のシートに分かれます。今回はまず1枚目だけ作成してください。\n2枚目以降が欲しいときは「次のメニュー表をお願いします。1枚目と同じベージュ/クラフト紙背景・2×2の4マスレイアウトで作ってください」と伝えてください。\n'
+    ? '\n野菜の数が多いため、合計'+sheets.length+'枚のシートに分かれます。今回はまず1枚目だけ作成してください。\n2枚目以降が欲しいときは「次のメニュー表をお願いします。1枚目と同じベージュ/クラフト紙背景・2×3の6マスレイアウトで作ってください」と伝えてください。\n'
     : '';
 
   return '手描き風でポップな、八百屋の路上販売スタンドに飾るメニュー看板を作ってください。\n'+multiNote+'\n'+secs+'\n\n各野菜には、シンプルで可愛い手描き風イラストを添えてください。\n「★本日の目玉★」と指定された野菜のマスには、星マークや太めの装飾枠など、他のマスより目立つ装飾を加えてください（マスの大きさは変えず、装飾だけで目立たせてください）。\nリストに記載のある野菜名・価格・産地・ひとこと以外の文章（キャッチコピーや挨拶文など）は一切追加しないでください。';
@@ -392,8 +463,8 @@ const buildArtMenuPrompt = () => {
   const hasLogo = (logoChoice === 'logo1' || logoChoice === 'logo2');
 
   const bgStyle = hasLogo
-    ? '背景は白（純白）にしてください。全体のタッチはクレヨンや色鉛筆で手描きしたような柔らかいスタイルにし、緑・青・茶・オレンジを中心としたやさしい色使いにしてください。葉っぱや草などの小さなあしらいを余白に散らしてもOKです。'
-    : '背景はクラフト紙風または白地の水彩テクスチャにしてください。全体のタッチはクレヨンや色鉛筆で手描きしたような柔らかいスタイルで、緑・青・茶・オレンジを中心としたやさしい色使いにしてください。';
+    ? '背景はクラフト紙風の温かみのある質感（ベージュ〜薄茶色）にしてください。全体のタッチはクレヨンや色鉛筆で手描きしたような柔らかいスタイルにし、緑・青・茶・オレンジを中心としたやさしい色使いにしてください。葉っぱや草などの小さなあしらいを余白に散らしてもOKです。'
+    : '背景はクラフト紙風の温かみのある質感（ベージュ〜薄茶色）にしてください。全体のタッチはクレヨンや色鉛筆で手描きしたような柔らかいスタイルで、緑・青・茶・オレンジを中心としたやさしい色使いにしてください。葉っぱや草などの小さなあしらいを余白に散らしてください。';
 
   let logoNote = '';
   if (hasLogo) {
@@ -606,6 +677,94 @@ const copyPrompt = key => {
   if(navigator.clipboard){navigator.clipboard.writeText(ta.value).then(done).catch(()=>{ta.select();document.execCommand('copy');done();});}
   else{ta.select();document.execCommand('copy');done();}
 };
+
+// ── タブ切り替え ──
+let currentTab = 'menu';
+const switchTab = (tab) => {
+  currentTab = tab;
+  document.getElementById('page-menu').style.display = tab === 'menu' ? 'block' : 'none';
+  document.getElementById('page-pos').style.display  = tab === 'pos'  ? 'block' : 'none';
+  document.getElementById('tab-menu').classList.toggle('active', tab === 'menu');
+  document.getElementById('tab-pos').classList.toggle('active',  tab === 'pos');
+  if (tab === 'pos') renderPOS();
+};
+
+// ── POS 数量データ（id → qty） ──
+let posQty = {};
+
+const renderPOS = () => {
+  const activeItems = items.filter(it => it.active !== false && Number(it.sell) > 0);
+  const list = document.getElementById('pos-list');
+
+  if (!activeItems.length) {
+    list.innerHTML = '<div class="pos-empty">メニュー管理ページで<br>「✓ 使う」にした野菜が<br>ここに表示されます。<br><br>売値（修正可）も入力してください。</div>';
+    updatePosTotal([]);
+    return;
+  }
+
+  list.innerHTML = activeItems.map(it => {
+    const qty = posQty[it.id] || 0;
+    const rowTotal = qty * Number(it.sell);
+    const unitLabel = (it.unitLabel && it.unitLabel.trim()) ? it.unitLabel.trim() : (it.costMode === 'weight' ? 'g' : '個');
+    const sellQtyNum = Number(it.sellQty) || 1;
+    const unitPrice = `${sellQtyNum}${unitLabel} ${Number(it.sell).toLocaleString('ja-JP')}円`;
+    const options = Array.from({length:21}, (_,i) => `<option value="${i}" ${qty===i?'selected':''}>${i}</option>`).join('');
+    return `
+    <div class="pos-row" id="pos-row-${it.id}">
+      <div style="flex:1;min-width:0;">
+        <div class="pos-name">${esc(it.name)}</div>
+        <div class="pos-unit-price">${unitPrice}</div>
+      </div>
+      <div class="pos-qty-wrap">
+        <select class="pos-qty-select" onchange="setPosQty('${it.id}', Number(this.value))">
+          ${options}
+        </select>
+        <span style="font-size:.75rem;opacity:.6">点</span>
+      </div>
+      <div class="pos-row-total" id="pos-row-total-${it.id}">${rowTotal > 0 ? rowTotal.toLocaleString('ja-JP')+'円' : '—'}</div>
+      <button class="pos-clear-row" title="この行をクリア" onclick="setPosQty('${it.id}', 0)">✕</button>
+    </div>`;
+  }).join('');
+
+  updatePosTotal(activeItems);
+};
+
+const setPosQty = (id, qty) => {
+  posQty[id] = qty;
+  // 行合計だけ更新（再描画せず）
+  const it = items.find(i => i.id === id);
+  if (!it) return;
+  const rowTotal = qty * Number(it.sell);
+  const totalEl = document.getElementById(`pos-row-total-${id}`);
+  if (totalEl) totalEl.textContent = rowTotal > 0 ? rowTotal.toLocaleString('ja-JP')+'円' : '—';
+  // セレクト値も同期
+  const sel = document.querySelector(`#pos-row-${id} .pos-qty-select`);
+  if (sel && Number(sel.value) !== qty) sel.value = qty;
+  updatePosTotal(items.filter(it => it.active !== false && Number(it.sell) > 0));
+};
+
+const updatePosTotal = (activeItems) => {
+  let total = 0;
+  const lines = [];
+  activeItems.forEach(it => {
+    const qty = posQty[it.id] || 0;
+    if (qty > 0) {
+      total += qty * Number(it.sell);
+      const unitLabel = (it.unitLabel && it.unitLabel.trim()) ? it.unitLabel.trim() : (it.costMode === 'weight' ? 'g' : '個');
+      const sellQtyNum = Number(it.sellQty) || 1;
+      lines.push(`${it.name} ×${qty}`);
+    }
+  });
+  document.getElementById('pos-total-yen').textContent = '¥' + total.toLocaleString('ja-JP');
+  document.getElementById('pos-total-sub').textContent = lines.length ? lines.join('　') : '選択された商品はありません';
+};
+
+const clearAllQty = () => {
+  posQty = {};
+  renderPOS();
+};
+
+// ── esc関数はすでに定義済み ──
 
 document.getElementById('inp-name').addEventListener('input',function(){document.getElementById('btn-add').disabled=!this.value.trim();});
 document.getElementById('inp-cost-total').addEventListener('input',updateAddPreview);
